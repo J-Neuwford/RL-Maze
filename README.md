@@ -36,4 +36,4 @@ This took me so much time to understand, and still might be wrong, but here is m
 
 **r = reward**. The reward for an action in the current state.
 
-**g = gamma**. The discount factor. How much does the agent value future rewards (1) over immediate rewards (0)? Or, the battle between watching YT shorts about RL learning vs. actually finishing this project.
+**γ = gamma**. The discount factor. How much does the agent value future rewards (1) over immediate rewards (0)? Or, the battle between watching YT shorts about RL learning vs. actually finishing this project.
