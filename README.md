@@ -1,6 +1,6 @@
 # RL Maze (WIP)
 
-An reinforcement learning project to learn the fundamentals and underlying algorithms behind my favourite form of AI.
+A reinforcement learning project to learn the fundamentals and underlying algorithms behind my favourite form of AI.
 
 [- Screenshots](#screenshots)
 
