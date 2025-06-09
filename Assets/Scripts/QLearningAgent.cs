@@ -2,128 +2,158 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class QLearningAgent
+public enum AgentAction
 {
-    readonly Dictionary<StateActionPair, float> qTable = new();
+    up, down, left, right
+}
 
-    readonly float alpha;
-    readonly float gamma;
-    float epsilon;
+public class QLearningAgent : MonoBehaviour
+{
+    [SerializeField] float alpha = 0.1f;
+    [SerializeField] float gamma = 0.95f;
+    [SerializeField] float epsilon = 0.3f;
+    [SerializeField] float epsilonDecay = 0.95f;
+    [SerializeField] float epsilonMinimum = 0.1f;
 
-    readonly System.Random rng = new();
+    [SerializeField] float moveDelay = 0.02f;
 
-    public QLearningAgent(float alpha, float gamma, float epsilon)
+    [SerializeField] float stepReward = -0.01f;
+    [SerializeField] float goalReward = 1.0f;
+    [SerializeField] float hazardReward = -1.0f;
+
+    [SerializeField] Vector2Int startPosition = new Vector2Int(0, 0);
+
+    
+    QLearningCore core;
+    Vector2Int gridPosition;
+    float moveCooldown = 0.0f;
+    float totalRewardInEpisode = 0.0f;
+    int stepsInEpisode = 0;
+    int episode = 1;
+
+    
+
+    void Start()
     {
-        this.alpha = alpha;
-        this.gamma = gamma;
-        this.epsilon = epsilon;
+        core = new QLearningCore(alpha, gamma, epsilon, epsilonDecay, epsilonMinimum);
+        gridPosition = startPosition;
+        UpdateWorldPosition();
     }
 
-    public AgentAction ChooseAction(Vector2Int state)
+    void Update()
     {
-        if(rng.NextDouble() < epsilon)
+        moveCooldown -= Time.deltaTime;
+        if (moveCooldown <= 0f)
         {
-            return (AgentAction)rng.Next(0, 4);
+            RunTrainingStep();
+        }
+    }
+
+    void RunTrainingStep()
+    {
+        AgentAction action = core.ChooseAction(gridPosition);
+        Vector2Int direction = GetDirection(action);
+        Vector2Int targetPosition = gridPosition + direction;
+
+        if (IsWall(targetPosition)) return;
+
+        gridPosition = targetPosition;
+        UpdateWorldPosition();
+
+        float reward = GetRewardAtPosition(gridPosition);
+        bool isTerminal = IsTerminalState(gridPosition);
+        Vector2Int nextState = isTerminal ? startPosition : gridPosition;
+
+        if (isTerminal)
+        {
+            core.UpdateTerminalQ(gridPosition, action, reward);
+
+            Debug.Log($"--- EPISODE {episode} ENDED ---");
+            Debug.Log($"Steps in episode: {stepsInEpisode}, Total Reward: {totalRewardInEpisode}");
+
+            episode++;
+            stepsInEpisode = 0;
+            totalRewardInEpisode = 0f;
+
+            core.DecayEpsilon();
+
+            gridPosition = startPosition;
+            UpdateWorldPosition();
+        }
+        else
+        {
+            core.UpdateQ(gridPosition, action, reward, nextState);
         }
 
-        float MaxQ = float.NegativeInfinity;
-        AgentAction bestAction = AgentAction.Up;
+        stepsInEpisode++;
+        totalRewardInEpisode += reward;
+        moveCooldown = moveDelay;
+    }
 
-        foreach(AgentAction action in System.Enum.GetValues(typeof(AgentAction))) 
+
+    float GetRewardAtPosition(Vector2Int position)
+    {
+        Collider[] hits = Physics.OverlapSphere(new Vector3(position.x, 0.1f, position.y), 0.1f);
+
+        foreach (Collider hit in hits)
         {
-            StateActionPair pair = new StateActionPair(state, action);
-            float q = qTable.ContainsKey(pair) ? qTable[pair] : 0f;
+            if (hit.CompareTag("Goal")) return goalReward;
+            if (hit.CompareTag("Hazard")) return hazardReward;
+        }
 
-            if(q > MaxQ)
+        return stepReward;
+    }
+
+    bool IsTerminalState(Vector2Int position)
+    {
+        Collider[] hits = Physics.OverlapSphere(new Vector3(position.x, 0.1f, position.y), 0.1f);
+
+        foreach (Collider hit in hits)
+        {
+            if (hit.CompareTag("Goal") || hit.CompareTag("Hazard"))
             {
-                MaxQ = q;
-                bestAction = action;
+                return true;
             }
         }
 
-        //Debug.Log($"[ChooseAction] State: {state}, Best Action: {bestAction}, Q-value: {MaxQ:F3}, Epsilon: {epsilon:F3}");
-        return bestAction;
+        return false;
     }
 
-    public void UpdateQ(Vector2Int state, AgentAction action, float reward, Vector2Int nextState)
+    bool IsWall(Vector2Int position)
     {
-        StateActionPair currentPair = new StateActionPair(state, action);
+        Vector3 checkPosition = new Vector3(position.x, 0.1f, position.y);
+        Collider[] hits = Physics.OverlapSphere(checkPosition, 0.1f);
 
-        float currentQ = qTable.ContainsKey(currentPair) ? qTable[currentPair] : 0f;
-
-        float maxNextQ = float.NegativeInfinity;
-        foreach(AgentAction nextAction in Enum.GetValues(typeof(AgentAction)))
+        foreach (Collider hit in hits)
         {
-            StateActionPair nextPair = new StateActionPair(nextState, nextAction);
-            float nextQ = qTable.ContainsKey(nextPair) ? qTable[nextPair] : 0f;
-            if(nextQ > maxNextQ)
-            {
-                maxNextQ = nextQ;
-            }
+            if (hit.CompareTag("Wall")) return true;
         }
 
-        float updatedQ = currentQ + alpha * (reward + gamma * maxNextQ - currentQ);
-        qTable[currentPair] = updatedQ;
-
-       //Debug.Log($"[UpdateQ] ({state}, {action}) -> {updatedQ:F3} | r: {reward}, maxQ(s'): {maxNextQ:F3}, oldQ: {currentQ:F3}");
+        return false;
     }
 
-    public void UpdateTerminalQ(Vector2Int state, AgentAction action, float reward)
+    Vector2Int GetDirection(AgentAction action)
     {
-        StateActionPair pair = new StateActionPair(state, action);
-        float currentQ = qTable.ContainsKey(pair) ? qTable[pair] : 0f;
-        float updatedQ = currentQ + alpha * (reward - currentQ);
-        qTable[pair] = updatedQ;
-       //Debug.Log($"[UpdateQ - Terminal] ({state}, {action}) -> {updatedQ:F3} | r: {reward}, oldQ: {currentQ:F3}");
+        return action switch
+        {
+            AgentAction.up => Vector2Int.up,
+            AgentAction.down => Vector2Int.down,
+            AgentAction.left => Vector2Int.left,
+            AgentAction.right => Vector2Int.right,
+            _ => Vector2Int.zero
+        };
     }
 
-    public float GetQValue(Vector2Int state, AgentAction action)
+    void UpdateWorldPosition()
     {
-        StateActionPair pair = new StateActionPair();
-        return qTable.ContainsKey(pair) ? qTable[pair] : 0f;
+        transform.position = new Vector3(gridPosition.x, 0.1f, gridPosition.y);
     }
 
     public float GetMaxQValue(Vector2Int state)
     {
-        float maxQ = float.NegativeInfinity;
-
-        foreach(AgentAction action in System.Enum.GetValues(typeof(AgentAction)))
-        {
-            StateActionPair pair = new StateActionPair(state, action);
-            float q = qTable.ContainsKey(pair) ? qTable[pair] : 0f;
-
-            if (q > maxQ) maxQ = q;
-        }
-        return maxQ;
+        return core.GetMaxQValue(state);
     }
 
-    public void DecayEpsilon(float decayRate, float minEpsilon)
-    {
-        epsilon = Mathf.Max(minEpsilon, epsilon * decayRate);
-        Debug.Log($"Epsilon: {epsilon}");
-    }
 
-    struct StateActionPair
-    {
-        public Vector2Int state;
-        public AgentAction action;
 
-        public StateActionPair(Vector2Int s, AgentAction a)
-        {
-            state = s;
-            action = a;
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is StateActionPair other && 
-                state.Equals(other.state) &&
-                action == other.action;
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(state, action);
-        }
-    }
 }

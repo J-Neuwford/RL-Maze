@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 public class HeatmapRenderer : MonoBehaviour
 {
     [SerializeField] QLearningAgent agent;
-    [SerializeField] float maxExpectedQ = 1f;
+    [SerializeField] float maxExpectedQ = 1.0f;
+    [SerializeField] float minExpectedQ = -1.0f;
     [SerializeField] List<TileData> floorTiles = new();
 
 
@@ -21,12 +21,8 @@ public class HeatmapRenderer : MonoBehaviour
         }
     }
     
-
-    
-
     void Start()
     {
-        agent = AgentController.sharedAgent;
         floorTiles.Clear();
 
         foreach (GameObject tile in GameObject.FindGameObjectsWithTag("Floor"))
@@ -48,21 +44,13 @@ public class HeatmapRenderer : MonoBehaviour
         foreach(TileData tile in floorTiles)
         {
             float maxQ = GetMaxQValueAtPosition(tile.gridPosition);
-            float normalized = Mathf.InverseLerp(-0.005f, maxExpectedQ, maxQ);
+            float normalized = Mathf.InverseLerp(minExpectedQ, maxExpectedQ, maxQ);
             tile.meshRenderer.material.color = Color.Lerp(Color.black, Color.blue, normalized);
         }    
     }
 
     float GetMaxQValueAtPosition(Vector2Int position)
     {
-        float maxQ = float.NegativeInfinity;
-
-        foreach (AgentAction action in System.Enum.GetValues(typeof(AgentAction)))
-        {
-            float q = agent.GetMaxQValue(position);
-            if(q > maxQ) maxQ = q;
-        }
-
-        return maxQ;
+        return agent.GetMaxQValue(position);
     }
 }
