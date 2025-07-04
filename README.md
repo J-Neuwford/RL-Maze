@@ -2,7 +2,13 @@
 
 An reinforcement learning project to learn the fundamentals and underlying algorithms behind my favourite form of AI.
 
+This project makes use of **Q-learning** - a tabular algorithm which (funnily enough) creates and updates a table of values for each state/action pair. It doesn't scale particularly well if there are a lot of potential actions or complex states, but is really accessible for getting started.
+
+## Contents
+
 [- Screenshots](#screenshots)
+
+[- How It Works](#how-it-works)
 
 [- Todo](#todo)
 
@@ -12,15 +18,34 @@ An reinforcement learning project to learn the fundamentals and underlying algor
 
 ![heatmap example](image.png)
 
+## How It Works
+
+The agent's goal is to find the goal.
+
+The agent has a list of possible **actions**: [up, down, left, right]
+
+The agent has a **state**: [x, y] describing it's position on a 2D grid.
+
+When the agent finds the goal, it will restart at the start location. This is defined as an **episode**.
+
+The agent will receive and then remember rewards for different situations. For example:
+
+- reaching the goal: 10
+- hitting a wall: -1
+- taking a step: -0.1
+- hitting a hazard: -5
+
+To start with, the agent's movement will be completely random (**epsilon** at value 1). After each episode, this randomness will decay and rely more apon it's knowledge of rewards for each action at a given state.
+
 # Todo
 
-- refactor Q-Learning script to a monobehavior to enable simultaneous agents.
-- update readme
-- add an arrow visualisation to show preferred direction at each state.
+- refactor Q-Learning script to a monobehavior to enable simultaneous agents. ✅
+- add a UI to display parameters.
+- add functionality to export Q-table data.
 
 ## The Q-Learning Algorithm
 
-This took me so much time to understand, and still might be wrong, but here is my understanding:
+This took me so much time to understand. I'm still not 100% sure I can explain it properly.
 
 ![Q-Learning algorithm](image-1.png)
 
@@ -36,4 +61,4 @@ This took me so much time to understand, and still might be wrong, but here is m
 
 **r = reward**. The reward for an action in the current state.
 
-**g = gamma**. The discount factor. How much does the agent value future rewards (1) over immediate rewards (0)? Or, the battle between watching YT shorts about RL learning vs. actually finishing this project.
+**γ = gamma**. The discount factor. How much does the agent value future rewards (1) over immediate rewards (0)? Or, the battle between watching YT shorts about RL learning vs. actually finishing this project.
