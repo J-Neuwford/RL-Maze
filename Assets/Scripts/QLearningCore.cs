@@ -31,7 +31,7 @@ public class QLearningCore
         }
 
         float maxQ = float.NegativeInfinity;
-        AgentAction bestAction = AgentAction.up;
+        AgentAction bestAction = (AgentAction)rng.Next(0, 4);
 
         foreach (AgentAction action in Enum.GetValues(typeof(AgentAction)))
         {
@@ -76,6 +76,7 @@ public class QLearningCore
     public void DecayEpsilon()
     {
         epsilon = Mathf.Max(epsilonMinimum, epsilon * epsilonDecay);
+        Debug.Log($"Epsilon: {epsilon}");
     }
 
     public float GetQValue(Vector2Int state, AgentAction action)

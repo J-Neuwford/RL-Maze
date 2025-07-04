@@ -20,6 +20,7 @@ public class QLearningAgent : MonoBehaviour
     [SerializeField] float stepReward = -0.01f;
     [SerializeField] float goalReward = 1.0f;
     [SerializeField] float hazardReward = -1.0f;
+    [SerializeField] float wallReward = -0.01f;
 
     [SerializeField] Vector2Int startPosition = new Vector2Int(0, 0);
 
@@ -51,11 +52,21 @@ public class QLearningAgent : MonoBehaviour
 
     void RunTrainingStep()
     {
+        Vector2Int state = gridPosition;
         AgentAction action = core.ChooseAction(gridPosition);
         Vector2Int direction = GetDirection(action);
         Vector2Int targetPosition = gridPosition + direction;
 
-        if (IsWall(targetPosition)) return;
+        if (IsWall(targetPosition))
+        {
+            core.UpdateQ(state, action, wallReward, state);
+
+            moveCooldown = moveDelay;
+            stepsInEpisode++;
+            totalRewardInEpisode += wallReward;
+
+            return;
+        };
 
         gridPosition = targetPosition;
         UpdateWorldPosition();
@@ -66,7 +77,7 @@ public class QLearningAgent : MonoBehaviour
 
         if (isTerminal)
         {
-            core.UpdateTerminalQ(gridPosition, action, reward);
+            core.UpdateTerminalQ(state, action, reward);
 
             Debug.Log($"--- EPISODE {episode} ENDED ---");
             Debug.Log($"Steps in episode: {stepsInEpisode}, Total Reward: {totalRewardInEpisode}");
@@ -82,7 +93,7 @@ public class QLearningAgent : MonoBehaviour
         }
         else
         {
-            core.UpdateQ(gridPosition, action, reward, nextState);
+            core.UpdateQ(state, action, reward, nextState);
         }
 
         stepsInEpisode++;
