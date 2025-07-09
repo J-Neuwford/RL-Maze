@@ -99,6 +99,11 @@ public class QLearningCore
         return maxQ;
     }
 
+    // UI 
+    public float GetEpsilon() => epsilon;
+
+    public void SetEpsilon(float e) => epsilon = Mathf.Clamp(e, 0f, 1f);
+
     struct StateActionPair
     {
         public Vector2Int state;

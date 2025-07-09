@@ -32,11 +32,14 @@ public class QLearningAgent : MonoBehaviour
     int stepsInEpisode = 0;
     int episode = 1;
 
-    
+    private void Awake()
+    {
+        core = new QLearningCore(alpha, gamma, epsilon, epsilonDecay, epsilonMinimum);
+    }
 
     void Start()
     {
-        core = new QLearningCore(alpha, gamma, epsilon, epsilonDecay, epsilonMinimum);
+        
         gridPosition = startPosition;
         UpdateWorldPosition();
     }
@@ -165,6 +168,17 @@ public class QLearningAgent : MonoBehaviour
         return core.GetMaxQValue(state);
     }
 
+    // UI
+    public float GetEpsilon() => core.GetEpsilon();
+    public float GetEpsilonDecay() => epsilonDecay;
+    public float GetAlpha() => alpha;
+    public float GetGamma() => gamma;
+
+
+    public void SetEpsilon(float e)
+    {
+        epsilon = e;
+    }
 
 
 }
